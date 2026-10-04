@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111113">
+  <title>ورود · ACA</title>
+  {% load static %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'chat/app.css' %}?v=29">
+</head>
+<body class="login-page aca-app dark-mode">
+  <script>
+    try {
+      if (localStorage.getItem("aca_theme") !== "light") {
+        document.body.classList.add("dark-mode");
+      } else {
+        document.body.classList.remove("dark-mode");
+      }
+    } catch (e) {}
+  </script>
+  <div class="login-card">
+    <h1 class="aca-brand">ACA<span class="aca-brand__dot">.</span><span class="aca-brand__sub">agent</span></h1>
+    <p class="muted" style="margin: 0 0 24px; font-size: var(--text-sm);">ورود به ایجنت کدنویسی خودکار</p>
+    <form id="login-form">
+      <label class="field">نام کاربری<input name="username" id="login-user" required autocomplete="username"></label>
+      <label class="field">رمز عبور<input type="password" name="password" id="login-pass" required autocomplete="current-password"></label>
+      <p class="login-error muted" id="login-error" hidden></p>
+      <button type="submit" class="btn primary" style="width:100%;margin-top:8px">ورود</button>
+    </form>
+  </div>
+  <script>
+    document.getElementById("login-form").onsubmit = async (e) => {
+      e.preventDefault();
+      const errEl = document.getElementById("login-error");
+      errEl.hidden = true;
+      const res = await fetch("/api/auth/login/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: document.getElementById("login-user").value.trim(),
+          password: document.getElementById("login-pass").value,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        errEl.textContent = data.error || "خطا";
+        errEl.hidden = false;
+        return;
+      }
+      window.location.href = "/";
+    };
+  </script>
+</body>
+</html>

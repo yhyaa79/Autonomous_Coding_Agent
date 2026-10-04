@@ -1,0 +1,7 @@
+{
+  "id": "before_adding_greeting",
+  "files": [
+    "print_numbers.py",
+    "numbers_log.txt"
+  ]
+}

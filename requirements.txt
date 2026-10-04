@@ -1,0 +1,6 @@
+Django>=5.0,<6
+openai>=1.40.0
+python-dotenv>=1.0.0
+croniter>=2.0.0
+cryptography>=42.0.0
+paramiko>=3.4.0

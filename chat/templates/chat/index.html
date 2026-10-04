@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#111113">
+  <title>ACA | ایجنت کدنویسی خودکار</title>
+  {% load static %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100;300;400;500;600;700&display=swap" rel="stylesheet">
+  <link id="hljs-theme-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" crossorigin disabled>
+  <link id="hljs-theme-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" crossorigin>
+  <link rel="stylesheet" href="{% static 'chat/app.css' %}?v=42">
+</head>
+<body class="aca-app dark-mode">
+  <script>
+    (function () {
+      try {
+        const saved = localStorage.getItem("aca_theme") || "dark";
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        const dark = saved === "dark" || (saved === "system" && prefersDark);
+        document.body.classList.toggle("dark-mode", dark);
+        const lightCss = document.getElementById("hljs-theme-light");
+        const darkCss = document.getElementById("hljs-theme-dark");
+        if (lightCss) lightCss.disabled = dark;
+        if (darkCss) darkCss.disabled = !dark;
+      } catch (e) {
+        document.body.classList.add("dark-mode");
+      }
+    })();
+  </script>
+
+  <div class="aca-shell">
+    <nav class="aca-rail" aria-label="ناوبری اصلی">
+      <a class="aca-rail__logo" href="/" title="خانه">A</a>
+
+      <div class="aca-rail__nav">
+<!--         <button type="button" class="rail-btn is-active" id="btn-toggle-projects-panel" title="پروژه‌ها و مکالمه‌ها">
+          <svg class="rail-btn__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <path d="M3 7h18M3 12h18M3 17h18"></path>
+            <rect x="5" y="5" width="6" height="4" rx="0.5"></rect>
+            <rect x="5" y="14" width="10" height="4" rx="0.5"></rect>
+          </svg>
+          <span class="rail-btn__label">پروژه</span>
+        </button> -->
+        <button type="button" class="rail-btn" id="btn-open-settings" title="تنظیمات">
+          <svg class="rail-btn__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+          </svg>
+          <span class="rail-btn__label">تنظیم</span>
+        </button>
+      </div>
+
+      <div class="aca-rail__bottom">
+        <span class="wallet-badge" id="wallet-badge"></span>
+        <button type="button" class="rail-btn" id="btn-logout" title="خروج">
+          <span class="rail-btn__label" style="font-size:11px">خروج</span>
+        </button>
+      </div>
+    </nav>
+
+    <aside class="aca-sidebar panel-projects-stack panel-conversations" id="panel-projects">
+      <div class="aca-sidebar__inner panel-conversations-inner">
+        <div class="panel-side-view" id="panel-view-projects">
+          <div class="aca-sidebar__head">
+            <h2>پروژه‌ها</h2>
+            <button type="button" class="btn primary" id="btn-new-project">
+              پروژه جدید
+              <svg class="rail-btn__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                <path d="M12 5v14M5 12h14"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="aca-sidebar__body scroller">
+            <div class="project-blocks" id="project-list"></div>
+          </div>
+          <div class="aca-sidebar__foot">
+            {{ model }} · Autonomous Coding Agent
+          </div>
+        </div>
+
+        <div class="panel-side-view panel-side-view-hidden" id="panel-view-changes" hidden>
+                <div class="timeline-panel-head">
+                  <h2>تغییرات کد</h2>
+                  <div class="timeline-panel-actions">
+                    <button type="button" class="btn btn-tiny" id="btn-refresh-changes" disabled title="بروزرسانی">↻</button>
+                    <button type="button" class="close-btn-x" id="btn-close-code-changes" aria-label="بستن">✕</button>
+                  </div>
+                </div>
+                <div class="timeline-section code-changes-section">
+                  <div id="code-changes-detail" class="code-changes-detail scroller"></div>
+                </div>
+              </div>
+              <div class="panel-side-view panel-side-view-hidden aca-settings panel-settings" id="panel-view-settings" hidden>
+                <header class="aca-settings__head">
+                  <h2>تنظیمات</h2>
+                  <button type="button" class="close-btn-x" id="btn-close-settings" aria-label="بستن">✕</button>
+                </header>
+                <div class="aca-settings__body scroller">
+                  <div class="settings-section">
+                    <h3 class="settings-section__title">ظاهر</h3>
+                    <p class="settings-section__desc">تم رابط کاربری را انتخاب کنید.</p>
+                    <div class="settings-theme-row" role="group" aria-label="تم">
+                      <button type="button" class="theme-pill" data-theme="dark">تاریک</button>
+                      <button type="button" class="theme-pill" data-theme="light">روشن</button>
+                      <button type="button" class="theme-pill" data-theme="system">سیستم</button>
+                    </div>
+                  </div>
+                  <div class="settings-section" id="settings-section-file-access">
+                    <h3 class="settings-section__title">دسترسی فایل (همهٔ پروژه‌ها)</h3>
+                    <p class="settings-section__desc">
+                      این لیست‌ها برای تمام پروژه‌ها و مکالمات شما اعمال می‌شوند.
+                      محدودهٔ focus هر مکالمه با تیک کنار فایل‌ها در درخت مشخص می‌شود.
+                    </p>
+                    <div class="file-access-section">
+                      <h4>همیشه در context ایجنت</h4>
+                      <p class="muted file-access-hint">محتوای این فایل‌ها در هر نوبت به ایجنت داده می‌شود.</p>
+                      <div class="file-access-add-row">
+                        <input type="text" id="file-access-always-input" class="settings-input" dir="ltr" placeholder="مسیر نسبی، مثلاً README.md" autocomplete="off" spellcheck="false">
+                        <button type="button" class="btn btn-tiny primary" id="btn-file-access-always-add">افزودن</button>
+                      </div>
+                      <ul class="file-access-list scroller" id="file-access-always-list"></ul>
+                    </div>
+                    <div class="file-access-section">
+                      <h4>هرگز محتوا قابل مشاهده نیست</h4>
+                      <p class="muted file-access-hint">ایجنت نام فایل را در tree می‌بیند اما read_file/write نمی‌تواند.</p>
+                      <div class="file-access-add-row">
+                        <input type="text" id="file-access-denied-input" class="settings-input" dir="ltr" placeholder="مسیر نسبی یا پوشه" autocomplete="off" spellcheck="false">
+                        <button type="button" class="btn btn-tiny primary" id="btn-file-access-denied-add">افزودن</button>
+                      </div>
+                      <ul class="file-access-list scroller" id="file-access-denied-list"></ul>
+                    </div>
+                    <div class="settings-actions-row">
+                      <button type="button" class="btn btn-small primary" id="file-access-save">ذخیره</button>
+                    </div>
+                    <p class="settings-status muted" id="file-access-status" hidden></p>
+                  </div>
+                  <div class="settings-section" id="settings-section-user-llm">
+                    <h3 class="settings-section__title">API شخصی (مدل)</h3>
+                    <p class="settings-section__desc">
+                      کلید خودتان را وارد کنید تا در انتخاب مدل composer، گزینهٔ «API شخصی» فعال شود.
+                      در این حالت هزینه از اعتبار ACA کسر نمی‌شود و درخواست‌ها مستقیماً با کلید شما به ارائه‌دهنده ارسال می‌شوند.
+                    </p>
+                    <div class="settings-field">
+                      <label for="user-llm-base-url">Base URL</label>
+                      <input type="url" id="user-llm-base-url" class="settings-input" placeholder="https://api.openai.com/v1" autocomplete="off" dir="ltr">
+                    </div>
+                    <div class="settings-field">
+                      <label for="user-llm-model">نام مدل</label>
+                      <input type="text" id="user-llm-model" class="settings-input" placeholder="gpt-4o-mini" autocomplete="off" dir="ltr">
+                    </div>
+                    <div class="settings-field">
+                      <label for="user-llm-api-key">کلید API</label>
+                      <input type="password" id="user-llm-api-key" class="settings-input" placeholder="sk-…" autocomplete="new-password" dir="ltr">
+                      <p class="settings-hint muted" id="user-llm-key-hint">کلید ذخیره‌شده روی سرور رمزنگاری می‌شود و در UI نمایش داده نمی‌شود.</p>
+                    </div>
+                    <div class="toggle-row">
+                      <label><input type="checkbox" id="user-llm-enabled" checked> فعال</label>
+                    </div>
+                    <div class="settings-actions-row">
+                      <button type="button" class="btn btn-small primary" id="btn-user-llm-save">ذخیره و اعتبارسنجی</button>
+                      <button type="button" class="btn btn-small" id="btn-user-llm-clear">حذف کلید</button>
+                    </div>
+                    <p class="settings-status muted" id="user-llm-status" hidden></p>
+                    <div class="settings-subsection settings-model-catalog-wrap">
+                      <h4 class="settings-wiki-sub">مدل‌های composer</h4>
+                      <p class="settings-section__desc settings-subsection__desc">
+                        مدل‌هایی که در باکس انتخاب مدل چت نمایش داده می‌شوند را تیک بزنید. قیمت‌ها فقط در این لیست نشان داده می‌شوند.
+                      </p>
+                      <div class="settings-model-catalog scroller" id="settings-model-catalog" role="group" aria-label="مدل‌های composer"></div>
+                    </div>
+                  </div>
+                  <div class="settings-section">
+                    <h3 class="settings-section__title">لاگ و عیب‌یابی</h3>
+                    <div class="toggle-row">
+                      <label><input type="checkbox" id="show-all-phase-logs"> نمایش همهٔ phase-log در چت</label>
+                    </div>
+                    <p class="settings-section__desc">همان «نمایش بیشتر» در پنل phase-log است.</p>
+                  </div>
+                  <div class="settings-section aca-wiki">
+                    <h3 class="settings-section__title">راهنمای ACA (ویکی)</h3>
+                    <p class="settings-section__desc">
+                      ACA یک دستیار ساده برای نوشتن، اجرا و نگهداری پروژه است. کار اصلی کدنویسی است؛
+                      زمان‌بندی، اتصال به سرور، مارکتینگ و دیباگ از طریق <strong>منابع</strong> توسط ایجنت ساخته می‌شوند — نه پنل جدا.
+                    </p>
+                    <h4 class="settings-wiki-sub">تگ‌های منابع</h4>
+                    <ul class="settings-wiki-list">
+                      <li><strong>زمان (time)</strong> — اجرای کار در تاریخ/ساعت مشخص یا تکرارشونده.</li>
+                      <li><strong>اتصال (connection)</strong> — SSH، اینستاگرام، API و هر سرویس خارجی.</li>
+                      <li><strong>گردش‌کار (workflow)</strong> — زنجیرهٔ چند منبع (مثلاً زمان → خبر → استوری).</li>
+                      <li><strong>هوش مصنوعی (ai)</strong> — جستجو و تولید محتوا.</li>
+                      <li><strong>دیباگ (debug)</strong> — تحلیل خطا و اسکن صفحه.</li>
+                      <li><strong>عملیات (ops)</strong> — nginx، deploy و کار روی سرور.</li>
+                      <li><strong>دانش (knowledge)</strong> — متن و راهنما بدون اجرا.</li>
+                    </ul>
+                    <h4 class="settings-wiki-sub">نمونهٔ درخواست‌ها</h4>
+                    <p class="settings-section__desc">
+                      «به سرور وصل شو و nginx را تنظیم کن» — ایجنت منبع اتصال SSH می‌سازد، تست می‌گیرد، بعد دستورات شما را اجرا می‌کند.<br>
+                      «هر شب ساعت ۲۱ استوری خبر بگذار» — منبع اتصال اینستا + منبع زمان + منبع تولید محتوا.
+                    </p>
+                    <p class="settings-section__desc muted">
+                      منابع هر مکالمه در پنل «منابع مکالمه» دیده می‌شوند؛ ساخت و ویرایش فقط توسط ایجنت است.
+                    </p>
+                  </div>
+                  <div class="settings-section aca-settings__about">
+                    <h3 class="settings-section__title">درباره</h3>
+                    <p>
+                      <strong>Autonomous Coding Agent</strong> · {{ model }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+      </div>
+    </aside>
+
+    <div class="aca-main">
+      <section class="aca-view is-active" id="view-chat">
+        <div class="aca-workspace" id="app-grid">
+          <main class="aca-chat chat-panel">
+            <header class="aca-chat__head">
+              <p class="aca-brand">ACA<span class="aca-brand__dot">.</span><span class="aca-brand__sub">agent</span></p>
+              <h1 class="aca-chat__title p-header" id="chat-title">چطور می‌توانم کمکتان کنم؟</h1>
+            </header>
+
+            <div id="log" class="aca-chat__log log scroller" aria-live="polite"></div>
+
+            <div class="aca-chat__composer-anchor">
+              <button type="button" class="toggle-chip toggle-chip--live-exec" id="btn-toggle-live-exec" disabled title="باز کردن اجرای زنده">اجرای زنده</button>
+
+            <form class="aca-chat__composer" id="form">
+              <div class="chat-input-shell">
+                <div class="chat-input-options" id="chat-input-options">
+                  <div class="chat-input-options__group chat-input-options__group--model">
+                    <span class="chat-input-options__label">مدل</span>
+                    <div class="llm-model-picker" id="llm-model-picker">
+                      <button type="button" class="llm-model-picker__trigger" id="llm-model-trigger" disabled aria-haspopup="listbox" aria-expanded="false" aria-controls="llm-model-panel">
+                        <span class="llm-model-picker__value" id="llm-model-label">—</span>
+                        <svg class="llm-model-picker__chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+                      </button>
+                      <div class="llm-model-picker__panel" id="llm-model-panel" hidden role="listbox" aria-label="انتخاب مدل"></div>
+                      <select id="llm-model" class="llm-model-picker__native" disabled hidden aria-hidden="true" tabindex="-1"></select>
+                    </div>
+                  </div>
+                  <div class="chat-input-options__group chat-input-options__group--more">
+                    <button type="button" class="composer-options-trigger" id="btn-composer-options" disabled title="گزینه‌های ارسال" aria-expanded="false" aria-controls="composer-options-popover">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+                      <span>گزینه‌ها</span>
+                    </button>
+                    <div class="composer-options-popover" id="composer-options-popover" hidden>
+                      <div class="composer-options-popover__row">
+                        <span class="composer-options-popover__label">دور</span>
+                        <input type="number" id="max-rounds" class="composer-rounds" value="{{ max_tool_rounds }}" min="5" max="80" disabled>
+                      </div>
+                      <div class="composer-options-popover__toggles">
+                        <label class="toggle-chip" title="اجازهٔ نوشتن فایل">
+                          <input type="checkbox" id="allow-write" checked disabled> نوشتن
+                        </label>
+                        <label class="toggle-chip" title="اجرای shell">
+                          <input type="checkbox" id="allow-shell" checked disabled> shell
+                        </label>
+                        <label class="toggle-chip" title="پاسخ استریم">
+                          <input type="checkbox" id="use-stream" checked> استریم
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="chat-input-options__toggles">
+                    <label class="toggle-chip" title="thinking">
+                      <input type="checkbox" id="enable-thinking" disabled> think
+                    </label>
+                    <label class="toggle-chip" title="تحلیل عمیق">
+                      <input type="checkbox" id="thinking-deep" disabled> عمیق
+                    </label>
+                  </div>
+                </div>
+                <div id="user-input-panel" class="user-input-panel" hidden aria-live="polite">
+                  <div class="user-input-panel__head">
+                    <strong id="user-input-panel-title">ورود اطلاعات</strong>
+                    <button type="button" class="btn btn-tiny" id="user-input-panel-dismiss" title="بستن">×</button>
+                  </div>
+                  <p id="user-input-panel-message" class="user-input-panel__message"></p>
+                  <div id="user-input-panel-fields" class="user-input-panel__fields"></div>
+                  <label class="field user-input-panel__notes">
+                    توضیحات (اختیاری)
+                    <textarea id="user-input-panel-notes" rows="2" autocomplete="off" placeholder="نکتهٔ اضافه برای ایجنت…"></textarea>
+                  </label>
+                  <div class="user-input-panel__actions">
+                    <button type="button" class="btn" id="user-input-panel-cancel">انصراف</button>
+                    <button type="button" class="btn primary" id="user-input-panel-submit">تأیید و ارسال</button>
+                  </div>
+                </div>
+                <div id="composer-attachments" class="composer-attachments" hidden></div>
+                <div id="composer-paste-fold" class="composer-paste-fold" hidden></div>
+                <div class="chat-input-shell__area">
+                  <input type="file" id="composer-file-input" class="composer-file-input" multiple hidden>
+                  <button type="button" class="composer-attach-btn" id="btn-composer-attach" disabled title="افزودن فایل" aria-label="افزودن فایل">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                  </button>
+                  <button type="button" class="composer-attach-btn" id="btn-composer-mic" disabled title="تبدیل صوت به متن" aria-label="تبدیل صوت به متن" aria-pressed="false">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"></rect><path d="M6 11a6 6 0 0 0 12 0"></path><path d="M12 17v3M9 20h6"></path></svg>
+                  </button>
+                  <textarea id="input" rows="2" disabled placeholder="سؤال یا دستور خود را بنویسید…"></textarea>
+                  <div class="context-ring" id="context-ring" hidden title="">
+                    <svg class="context-ring__svg" viewBox="0 0 38 38" width="42" height="42" aria-hidden="true">
+                      <circle class="context-ring__track" cx="18" cy="18" r="15.5" fill="none" stroke-width="3"></circle>
+                      <circle class="context-ring__progress" id="context-ring-progress" cx="18" cy="18" r="15.5" fill="none" stroke-width="3" stroke-linecap="round" transform="rotate(-90 18 18)"></circle>
+                    </svg>
+                  </div>
+                  <button type="submit" class="send-btn" id="send" disabled aria-label="ارسال">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" width="18" height="18" aria-hidden="true">
+                      <path fill="currentColor" d="M214.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L160 141.2V448c0 17.7 14.3 32 32 32s32-14.3 32-32V141.2L329.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160z"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </form>
+            </div>
+
+            <div class="live-exec live-exec--sheet" id="live-exec" hidden>
+              <div class="live-exec-head">
+                <span>اجرای زنده</span>
+                <div class="live-exec-head__actions">
+                  <button type="button" class="btn btn-tiny" id="btn-copy-tool-trace">کپی</button>
+                  <button type="button" class="btn btn-tiny" id="btn-close-live-exec" title="بستن">بستن</button>
+                </div>
+              </div>
+              <div class="aca-expandable is-expanded" id="live-exec-body-wrap">
+                <div class="aca-expandable__inner">
+                  <div id="tool-trace" class="tool-trace-inner scroller"></div>
+                </div>
+              </div>
+            </div>
+          </main>
+        </div>
+      </section>
+    </div>
+
+    <aside class="aca-aside panel-wide" id="panel-focus">
+      
+      <div class="status-bar status-bar--idle" id="status-bar">
+<div class="status-mascot" id="status-mascot" aria-hidden="true" title="">
+  <svg class="status-mascot__svg" viewBox="0 0 72 44" width="46" height="29" focusable="false" aria-hidden="true">
+
+    <!-- براکت چپ 〔 -->
+    <path class="status-mascot__bracket" d="M17 5 L12 10 L12 34 L17 39" />
+
+    <!-- براکت راست 〕 -->
+    <path class="status-mascot__bracket" d="M55 5 L60 10 L60 34 L55 39" />
+
+    <!-- چشم‌ها ⦁⦁ -->
+    <g class="status-mascot__eyes">
+      <circle class="status-mascot__eye" cx="28" cy="22" r="3.8" />
+      <circle class="status-mascot__eye" cx="44" cy="22" r="3.8" />
+    </g>
+
+  </svg>
+</div>
+        <p class="status-line" id="status-line" role="status" aria-live="polite"></p>
+      </div>
+
+      <section class="focus-card focus-card--scope" id="focus-scope-card" hidden>
+        <header class="focus-card__head focus-card__head--compact">
+          <h2>محدودهٔ focus</h2>
+        </header>
+        <div class="focus-card__body focus-card__body--compact">
+          <div class="scope-chips" id="scope-chips"></div>
+        </div>
+      </section>
+      <section class="focus-card focus-card--grow">
+        <header class="focus-card__head focus-card__head--compact"><h3>فایل‌ها</h3></header>
+        <div id="file-tree" class="file-tree scroller focus-card__body focus-card__body--flush"></div>
+      </section>
+      <section class="focus-card focus-card--preview" id="focus-preview-card" hidden>
+        <header class="focus-card__head focus-card__head--compact"><h3>پیش‌نمایش</h3></header>
+        <div id="file-preview" class="file-preview scroller focus-card__body focus-card__body--flush"></div>
+      </section>
+      <section class="focus-card focus-card--tools">
+        <header class="focus-card__head focus-card__head--compact"><h3>منابع مکالمه</h3></header>
+        <div class="agent-tools-panel focus-card__body focus-card__body--tools" id="agent-tools-panel">
+          <div class="tools-attach-row">
+            <input type="text" id="tool-link-input" class="tools-input" placeholder="لینک، شناسه یا slug منبع" disabled>
+            <button type="button" class="btn btn-tiny primary" id="btn-attach-tool" disabled>افزودن</button>
+          </div>
+          <div class="tools-section-head">
+            <span>متصل‌شده</span>
+            <span class="muted" id="conversation-tools-count">0</span>
+          </div>
+          <div id="conversation-tools-list" class="tools-card-list scroller">
+            <p class="muted tools-empty">—</p>
+          </div>
+        </div>
+      </section>
+    </aside>
+  </div>
+
+  <dialog id="dialog-permission" class="dialog-permission">
+    <div class="permission-dialog-body">
+      <h3 id="permission-dialog-title">درخواست اجازه</h3>
+      <p id="permission-dialog-message" class="permission-dialog-text">—</p>
+      <pre id="permission-dialog-detail" class="permission-dialog-detail scroller"></pre>
+      <div class="dialog-actions">
+        <button type="button" class="btn" id="permission-deny">رد</button>
+        <button type="button" class="btn primary" id="permission-allow">اجازه می‌دهم</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="dialog-job">
+    <form method="dialog" id="form-job">
+      <h3 id="job-dialog-title">ویرایش زمان‌بندی</h3>
+      <input type="hidden" name="job_id" id="job-edit-id">
+      <label class="field">عنوان<input name="title" id="job-edit-title" required></label>
+      <label class="field">نوع زمان‌بندی
+        <select name="schedule_kind" id="job-edit-kind">
+          <option value="once">یک‌بار</option>
+          <option value="cron">تکرار cron</option>
+          <option value="interval">هر چند ثانیه</option>
+        </select>
+      </label>
+      <div class="job-schedule-once" id="job-fields-once">
+        <label class="field">تاریخ<input type="date" id="job-edit-date"></label>
+        <label class="field">ساعت<input type="time" id="job-edit-time" step="60"></label>
+      </div>
+      <label class="field job-schedule-cron" id="job-fields-cron">cron
+        <input name="cron_expression" id="job-edit-cron" placeholder="0 9 * * *">
+      </label>
+      <label class="field job-schedule-interval" id="job-fields-interval">فاصله (ثانیه)
+        <input type="number" name="interval_seconds" id="job-edit-interval" min="30">
+      </label>
+      <label class="field">منطقه زمانی<input name="timezone" id="job-edit-tz" value="Asia/Tehran" readonly></label>
+      <label class="field">دستور agent<textarea name="message" id="job-edit-message" rows="5" required placeholder="دقیق بنویسید agent هنگام اجرا چه کاری انجام دهد…"></textarea></label>
+      <label class="field">حداکثر اجرا (خالی = نامحدود)
+        <input type="number" name="max_runs" id="job-edit-max-runs" min="1" placeholder="نامحدود">
+      </label>
+      <label class="field">وضعیت
+        <select name="status" id="job-edit-status">
+          <option value="active">فعال</option>
+          <option value="paused">متوقف</option>
+          <option value="cancelled">لغو شده</option>
+          <option value="completed">تمام شده</option>
+        </select>
+      </label>
+      <div class="dialog-actions">
+        <button type="button" class="btn" id="cancel-job">انصراف</button>
+        <button type="submit" class="btn primary">ذخیره</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dialog-resource-detail" class="dialog-resource-detail dialog-resource-readonly">
+    <form method="dialog" id="form-resource-detail">
+      <header class="resource-detail-head">
+        <div>
+          <h3 id="resource-detail-title">—</h3>
+          <p class="muted resource-detail-slug" id="resource-detail-slug">—</p>
+          <div class="resource-detail-tags" id="resource-detail-tags"></div>
+        </div>
+        <label class="field resource-version-field">ورژن
+          <select id="resource-detail-version"></select>
+        </label>
+      </header>
+      <p class="muted" id="resource-detail-kind">—</p>
+      <div class="field resource-readonly-block">
+        <span class="field-label">توضیحات</span>
+        <div id="resource-detail-description" class="resource-readonly-text scroller"></div>
+      </div>
+      <div class="field resource-readonly-block" id="resource-detail-blocks-wrap" hidden>
+        <span class="field-label">محتوا</span>
+        <pre id="resource-detail-blocks" class="resource-readonly-pre scroller" dir="ltr"></pre>
+      </div>
+      <p class="muted resource-readonly-note">کد و تنظیمات اجرایی فقط برای ایجنت است — در UI نمایش داده نمی‌شود.</p>
+      <div class="dialog-actions">
+        <button type="button" class="btn" id="resource-detail-close">بستن</button>
+        <button type="button" class="btn btn-tiny" id="resource-detail-copy-link">کپی لینک</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dialog-file-preview" class="dialog-file-preview">
+    <header class="file-preview-modal-head">
+      <div>
+        <h3 id="file-preview-modal-title">—</h3>
+        <p class="muted" id="file-preview-modal-meta">—</p>
+      </div>
+      <button type="button" class="close-btn-x" id="file-preview-modal-close" aria-label="بستن">✕</button>
+    </header>
+    <div id="file-preview-modal-body" class="file-preview-modal-body scroller ltr-block"></div>
+  </dialog>
+
+  <dialog id="dialog-composer-attachment" class="dialog-file-preview">
+    <header class="file-preview-modal-head">
+      <div>
+        <h3 id="composer-attachment-modal-title">—</h3>
+        <p class="muted" id="composer-attachment-modal-meta">—</p>
+      </div>
+      <button type="button" class="close-btn-x" id="composer-attachment-modal-close" aria-label="بستن">✕</button>
+    </header>
+    <div id="composer-attachment-modal-body" class="file-preview-modal-body scroller ltr-block"></div>
+  </dialog>
+
+  <dialog id="dialog-project">
+    <form method="dialog" id="form-project">
+      <h3>پروژه جدید</h3>
+      <label class="field">نام<input name="name" required></label>
+      <label class="field">مسیر پوشه
+        <input name="root_path" id="project-root-path" required dir="ltr" placeholder="/Users/you/projects/my-app" autocomplete="off" spellcheck="false">
+      </label>
+      <p class="muted field-hint">مسیر را بنویسید یا پیست کنید؛ با کلیک روی پوشه‌ها در زیر هم به‌روز می‌شود.</p>
+      <div class="path-picker" id="path-picker">
+        <div class="path-picker-bar">
+          <button type="button" class="btn btn-tiny" id="path-picker-up" disabled>↑ والد</button>
+          <span class="path-picker-current" id="path-picker-current"></span>
+        </div>
+        <ul class="path-picker-list scroller" id="path-picker-list"></ul>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn" id="cancel-project">انصراف</button>
+        <button type="submit" class="btn primary">ایجاد</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    window.APP_CONFIG = {
+      maxToolRounds: {{ max_tool_rounds }},
+      maxHistoryTurns: {{ max_history_turns }},
+      apiTokenRequired: {{ api_token_required|yesno:"true,false" }},
+      authRequired: {{ auth_required|yesno:"true,false" }},
+      defaultModel: "{{ default_model|escapejs }}",
+      models: {{ models|safe }},
+      wallet: {% if wallet %}{{ wallet|safe }}{% else %}null{% endif %},
+      username: {% if username %}"{{ username|escapejs }}"{% else %}null{% endif %},
+      pendingToolRef: {% if pending_tool_ref %}"{{ pending_tool_ref|escapejs }}"{% else %}null{% endif %},
+      pendingToolConversationId: {% if pending_tool_conversation_id %}{{ pending_tool_conversation_id }}{% else %}null{% endif %},
+      pendingToolProjectId: {% if pending_tool_project_id %}{{ pending_tool_project_id }}{% else %}null{% endif %},
+      byokModelId: "{{ byok_model_id|escapejs }}",
+      userLlm: {% if user_llm %}{{ user_llm|safe }}{% else %}null{% endif %},
+    };
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" crossorigin></script>
+  <script src="{% static 'chat/render.js' %}?v=2"></script>
+  <script src="{% static 'chat/status-mascot.js' %}?v=5"></script>
+  <script src="{% static 'chat/app.js' %}?v=43"></script>
+</body>
+</html>
