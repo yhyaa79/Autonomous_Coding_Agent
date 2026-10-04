@@ -5,3 +5,8 @@ db.sqlite3
 .venv/
 venv/
 var/message_backups/
+
+test
+test2
+test3
+test4
